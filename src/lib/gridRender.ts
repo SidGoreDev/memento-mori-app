@@ -7,6 +7,7 @@ export interface GridRenderOptions {
   weeksLived: number
   categoryIndices: number[]
   categories: Category[]
+  selectedWeek?: number | null
   cellSize: number
   gap: number
   emptyColor: string
@@ -35,6 +36,7 @@ export function drawGridToContext(
     weeksLived,
     categoryIndices,
     categories,
+    selectedWeek,
     cellSize,
     gap,
     emptyColor,
@@ -72,6 +74,12 @@ export function drawGridToContext(
       context.strokeStyle = accentColor
       context.lineWidth = 2
       context.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1)
+    }
+
+    if (selectedWeek === weekIndex) {
+      context.strokeStyle = '#ffffff'
+      context.lineWidth = 2
+      context.strokeRect(x + 1.5, y + 1.5, cellSize - 3, cellSize - 3)
     }
   }
 

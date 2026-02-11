@@ -33,6 +33,7 @@ function App() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [categoryError, setCategoryError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -82,6 +83,9 @@ function App() {
       setIsHydrated(true)
       return
     }
+    if (window.location.hash.length > 1) {
+      setNotice('Invalid share link ignored.')
+    }
 
     const fromStorage = loadStateFromStorage()
     if (fromStorage) {
@@ -109,12 +113,18 @@ function App() {
       weeksLived: metrics.weeksLived,
       categoryIndices,
       categories,
+      selectedWeek,
       cellSize,
       gap,
       emptyColor: theme.gridEmpty,
       accentColor: theme.accent,
     })
-  }, [metrics, categoryIndices, categories, cellSize, gap, theme, layout])
+  }, [metrics, categoryIndices, categories, selectedWeek, cellSize, gap, theme, layout])
+
+  useEffect(() => {
+    if (step !== 'visualization' || !metrics) return
+    setSelectedWeek(metrics.todayWeekIndex)
+  }, [step, metrics])
 
   const hoveredCategory =
     tooltip && categories[categoryIndices[tooltip.weekIndex] ?? -1]
@@ -137,6 +147,22 @@ function App() {
     setTooltip({ weekIndex: index, x: x + 16, y: y + 16 })
   }
 
+  const setTooltipByIndex = (index: number) => {
+    const col = index % 52
+    const row = Math.floor(index / 52)
+    const x = col * (cellSize + gap) + cellSize + 8
+    const y = row * (cellSize + gap) + 8
+    setTooltip({ weekIndex: index, x, y })
+  }
+
+  const moveSelectedWeek = (delta: number) => {
+    if (!metrics) return
+    const from = selectedWeek ?? metrics.todayWeekIndex
+    const next = Math.max(0, Math.min(metrics.totalWeeks - 1, from + delta))
+    setSelectedWeek(next)
+    setTooltipByIndex(next)
+  }
+
   const handleExportPng = () => {
     if (!metrics || !layout) return
 
@@ -154,6 +180,7 @@ function App() {
       weeksLived: metrics.weeksLived,
       categoryIndices,
       categories,
+      selectedWeek,
       cellSize,
       gap,
       emptyColor: theme.gridEmpty,
@@ -190,6 +217,8 @@ function App() {
     clearStoredState()
     window.history.replaceState({}, '', window.location.pathname)
     reset()
+    setTooltip(null)
+    setSelectedWeek(null)
     setNotice('State reset.')
   }
 
@@ -404,7 +433,7 @@ function App() {
             >
               Copy share link
             </button>
-            <button type="button" onClick={handleResetAll}>
+            <button type="button" onClick={handleResetAll} data-testid="reset-button">
               Reset all
             </button>
           </div>
@@ -414,13 +443,32 @@ function App() {
               <canvas
                 ref={canvasRef}
                 className="grid-canvas"
+                tabIndex={0}
                 onMouseMove={(event) =>
+                  onCanvasMove(event.clientX, event.clientY)
+                }
+                onClick={(event) =>
                   onCanvasMove(event.clientX, event.clientY)
                 }
                 onMouseLeave={() => setTooltip(null)}
                 onTouchStart={(event) => {
                   const touch = event.touches[0]
                   onCanvasMove(touch.clientX, touch.clientY)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowRight') {
+                    event.preventDefault()
+                    moveSelectedWeek(1)
+                  } else if (event.key === 'ArrowLeft') {
+                    event.preventDefault()
+                    moveSelectedWeek(-1)
+                  } else if (event.key === 'ArrowDown') {
+                    event.preventDefault()
+                    moveSelectedWeek(52)
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    moveSelectedWeek(-52)
+                  }
                 }}
                 data-testid="memento-grid"
                 aria-label={`Life grid with ${metrics.totalWeeks} weeks`}
