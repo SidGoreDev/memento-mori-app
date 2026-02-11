@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { buildAllWeekCategoryIndices } from './lib/categoryAllocation'
 import { LIFE_EXPECTANCY_MAX, LIFE_EXPECTANCY_MIN } from './lib/defaults'
 import { drawGridToContext, getGridLayout, getWeekIndexAtPoint } from './lib/gridRender'
+import { clearStoredState, loadStateFromStorage, saveStateToStorage } from './lib/persistence'
+import { decodeStateFromHash, encodeStateToHash } from './lib/shareState'
 import { THEMES } from './lib/themes'
 import { computeDerivedMetrics, getWeekDateRange } from './lib/weekMath'
 import { useAppStore } from './store/useAppStore'
@@ -22,6 +24,8 @@ function App() {
     setBirthDate,
     setLifeExpectancyYears,
     updateCategory,
+    addCategory,
+    removeCategory,
     setColorScheme,
     setStep,
     reset,
@@ -30,6 +34,8 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const [categoryError, setCategoryError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const theme = THEMES[colorScheme]
@@ -65,6 +71,31 @@ function App() {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  useEffect(() => {
+    const fromHash = decodeStateFromHash(window.location.hash)
+    if (fromHash) {
+      const { schemaVersion, ...state } = fromHash
+      void schemaVersion
+      useAppStore.setState({ ...state, step: 'input', hoveredWeek: null })
+      setNotice('Loaded shared state.')
+      setIsHydrated(true)
+      return
+    }
+
+    const fromStorage = loadStateFromStorage()
+    if (fromStorage) {
+      useAppStore.setState({ ...fromStorage, step: 'input', hoveredWeek: null })
+      setNotice('Restored your last session.')
+    }
+
+    setIsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isHydrated || !birthDate) return
+    saveStateToStorage({ birthDate, lifeExpectancyYears, categories, colorScheme })
+  }, [birthDate, categories, colorScheme, isHydrated, lifeExpectancyYears])
 
   useEffect(() => {
     if (!metrics || !layout || !canvasRef.current) return
@@ -135,6 +166,33 @@ function App() {
     link.click()
   }
 
+  const handleCopyShareLink = async () => {
+    if (!birthDate) {
+      setNotice('Add a birth date before generating a share link.')
+      return
+    }
+    const hash = encodeStateToHash({
+      birthDate,
+      lifeExpectancyYears,
+      categories,
+      colorScheme,
+    })
+    const shareUrl = `${window.location.origin}${window.location.pathname}#${hash}`
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setNotice('Share link copied to clipboard.')
+    } catch {
+      setNotice('Unable to access clipboard. Copy the URL from the address bar.')
+    }
+  }
+
+  const handleResetAll = () => {
+    clearStoredState()
+    window.history.replaceState({}, '', window.location.pathname)
+    reset()
+    setNotice('State reset.')
+  }
+
   return (
     <main
       className="app"
@@ -155,6 +213,7 @@ function App() {
         <p className="subtle">
           Reflective visualization only. Not medical or predictive advice.
         </p>
+        {notice && <p className="notice">{notice}</p>}
       </header>
 
       {step === 'input' && (
@@ -214,6 +273,7 @@ function App() {
               <span>Past %</span>
               <span>Future %</span>
               <span>Color</span>
+              <span>Action</span>
             </div>
             {categories.map((category) => (
               <div className="category-row" key={category.id}>
@@ -231,7 +291,10 @@ function App() {
                   value={category.pastPercent}
                   onChange={(event) =>
                     updateCategory(category.id, {
-                      pastPercent: Number.parseInt(event.target.value || '0', 10),
+                      pastPercent: Math.max(
+                        0,
+                        Math.min(100, Number.parseInt(event.target.value || '0', 10)),
+                      ),
                     })
                   }
                 />
@@ -242,7 +305,10 @@ function App() {
                   value={category.futurePercent}
                   onChange={(event) =>
                     updateCategory(category.id, {
-                      futurePercent: Number.parseInt(event.target.value || '0', 10),
+                      futurePercent: Math.max(
+                        0,
+                        Math.min(100, Number.parseInt(event.target.value || '0', 10)),
+                      ),
                     })
                   }
                 />
@@ -253,8 +319,24 @@ function App() {
                     updateCategory(category.id, { color: event.target.value })
                   }
                 />
+                <button
+                  type="button"
+                  onClick={() => removeCategory(category.id)}
+                  disabled={categories.length <= 1}
+                  aria-label={`Remove ${category.name}`}
+                >
+                  Remove
+                </button>
               </div>
             ))}
+            <button
+              type="button"
+              className="secondary"
+              onClick={addCategory}
+              data-testid="add-category-button"
+            >
+              Add category
+            </button>
             <p className="subtle">
               Past total: <strong>{pastTotal}%</strong> | Future total:{' '}
               <strong>{futureTotal}%</strong>
@@ -315,7 +397,14 @@ function App() {
             >
               Export PNG
             </button>
-            <button type="button" onClick={reset}>
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              data-testid="copy-share-link-button"
+            >
+              Copy share link
+            </button>
+            <button type="button" onClick={handleResetAll}>
               Reset all
             </button>
           </div>

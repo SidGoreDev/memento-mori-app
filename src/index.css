@@ -50,6 +50,11 @@ body {
   color: var(--text-muted);
 }
 
+.notice {
+  margin-top: 0.6rem;
+  color: var(--accent);
+}
+
 .panel {
   margin-top: 1.1rem;
   padding: 1rem;
@@ -104,10 +109,14 @@ button.primary {
   border-color: transparent;
 }
 
+button.secondary {
+  width: fit-content;
+}
+
 .category-head,
 .category-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1.5fr) 1fr 1fr 72px;
+  grid-template-columns: minmax(120px, 1.5fr) 1fr 1fr 72px 80px;
   gap: 0.5rem;
   align-items: center;
   margin-top: 0.45rem;

@@ -14,6 +14,8 @@ interface AppStore {
   setBirthDate: (birthDate: string) => void
   setLifeExpectancyYears: (years: number) => void
   updateCategory: (id: string, updates: Partial<Category>) => void
+  addCategory: () => void
+  removeCategory: (id: string) => void
   setColorScheme: (scheme: ColorScheme) => void
   setStep: (step: AppStep) => void
   setHoveredWeek: (week: number | null) => void
@@ -29,6 +31,13 @@ const initialState = {
   hoveredWeek: null,
 }
 
+function createCategoryId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `category-${Math.random().toString(36).slice(2, 10)}`
+}
+
 export const useAppStore = create<AppStore>((set) => ({
   ...initialState,
   setBirthDate: (birthDate) => set({ birthDate }),
@@ -39,6 +48,24 @@ export const useAppStore = create<AppStore>((set) => ({
         category.id === id ? { ...category, ...updates } : category,
       ),
     })),
+  addCategory: () =>
+    set((state) => ({
+      categories: [
+        ...state.categories,
+        {
+          id: createCategoryId(),
+          name: `Category ${state.categories.length + 1}`,
+          color: '#A0A0A0',
+          pastPercent: 0,
+          futurePercent: 0,
+        },
+      ],
+    })),
+  removeCategory: (id) =>
+    set((state) => {
+      if (state.categories.length <= 1) return state
+      return { categories: state.categories.filter((category) => category.id !== id) }
+    }),
   setColorScheme: (colorScheme) => set({ colorScheme }),
   setStep: (step) => set({ step }),
   setHoveredWeek: (hoveredWeek) => set({ hoveredWeek }),
