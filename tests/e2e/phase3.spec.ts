@@ -31,6 +31,15 @@ test('grid supports keyboard navigation', async ({ page }) => {
   expect(secondText).not.toBe(firstText)
 })
 
+test('insights panel renders five reflection prompts', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('birth-date-input').fill('1990-01-01')
+  await page.getByTestId('render-grid-button').click()
+
+  const prompts = page.getByTestId('reflection-insights').locator('li')
+  await expect(prompts).toHaveCount(5)
+})
+
 test('reset clears local persisted state', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('birth-date-input').fill('1989-10-03')

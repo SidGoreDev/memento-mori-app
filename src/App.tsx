@@ -3,6 +3,7 @@ import { buildAllWeekCategoryIndices } from './lib/categoryAllocation'
 import { LIFE_EXPECTANCY_MAX, LIFE_EXPECTANCY_MIN } from './lib/defaults'
 import { drawGridToContext, getGridLayout, getWeekIndexAtPoint } from './lib/gridRender'
 import { clearStoredState, loadStateFromStorage, saveStateToStorage } from './lib/persistence'
+import { generateReflectionInsights } from './lib/reflectionInsights'
 import { decodeStateFromHash, encodeStateToHash } from './lib/shareState'
 import { THEMES } from './lib/themes'
 import { computeDerivedMetrics, getWeekDateRange } from './lib/weekMath'
@@ -66,6 +67,11 @@ function App() {
     if (!metrics) return null
     return getGridLayout(metrics.totalWeeks, cellSize, gap)
   }, [cellSize, gap, metrics])
+
+  const reflectionLines = useMemo(() => {
+    if (!metrics) return []
+    return generateReflectionInsights(metrics, categories)
+  }, [metrics, categories])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
@@ -221,6 +227,11 @@ function App() {
     setSelectedWeek(null)
     setNotice('State reset.')
   }
+
+  const clampedPercentLived = metrics
+    ? Math.max(0, Math.min(100, metrics.percentLived))
+    : 0
+  const clampedPercentRemaining = 100 - clampedPercentLived
 
   return (
     <main
@@ -490,9 +501,86 @@ function App() {
 
             <aside className="panel insights" data-testid="insights-panel">
               <h2>Insights</h2>
-              <p>Weeks lived: {metrics.weeksLived.toLocaleString()}</p>
-              <p>Weeks remaining: {metrics.weeksRemaining.toLocaleString()}</p>
-              <p>Life lived: {metrics.percentLived.toFixed(1)}%</p>
+              <div className="metric-stack">
+                <article className="metric-card">
+                  <span>Weeks lived</span>
+                  <strong>{metrics.weeksLived.toLocaleString()}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Weeks remaining</span>
+                  <strong>{metrics.weeksRemaining.toLocaleString()}</strong>
+                </article>
+                <article className="metric-card">
+                  <span>Life lived</span>
+                  <strong>{metrics.percentLived.toFixed(1)}%</strong>
+                </article>
+              </div>
+
+              <section className="stack-section">
+                <h3>Life progress</h3>
+                <div className="stack-bar" data-testid="life-progress-stack">
+                  <span
+                    className="stack-segment stack-lived"
+                    style={{ width: `${clampedPercentLived}%` }}
+                    title={`Lived ${clampedPercentLived.toFixed(1)}%`}
+                  />
+                  <span
+                    className="stack-segment stack-remaining"
+                    style={{ width: `${clampedPercentRemaining}%` }}
+                    title={`Remaining ${clampedPercentRemaining.toFixed(1)}%`}
+                  />
+                </div>
+                <p className="subtle">
+                  {clampedPercentLived.toFixed(1)}% lived, {clampedPercentRemaining.toFixed(1)}%
+                  {' '}remaining.
+                </p>
+              </section>
+
+              <section className="stack-section">
+                <h3>Category stack</h3>
+                <div className="stack-label-row">
+                  <span>Past</span>
+                  <div className="stack-bar">
+                    {categories.map((category) => (
+                      <span
+                        key={`${category.id}-past`}
+                        className="stack-segment"
+                        style={{
+                          width: `${Math.max(0, category.pastPercent)}%`,
+                          backgroundColor: category.color,
+                        }}
+                        title={`${category.name}: ${category.pastPercent}% past`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="stack-label-row">
+                  <span>Future</span>
+                  <div className="stack-bar">
+                    {categories.map((category) => (
+                      <span
+                        key={`${category.id}-future`}
+                        className="stack-segment"
+                        style={{
+                          width: `${Math.max(0, category.futurePercent)}%`,
+                          backgroundColor: category.color,
+                        }}
+                        title={`${category.name}: ${category.futurePercent}% future`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section className="reflection-section">
+                <h3>Reflection prompts</h3>
+                <ol className="reflection-list" data-testid="reflection-insights">
+                  {reflectionLines.map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
+                </ol>
+              </section>
+
               {metrics.weeksRemaining === 0 && (
                 <p className="subtle">You are beyond your selected expectancy.</p>
               )}

@@ -192,8 +192,86 @@ button.secondary {
   margin-top: 0;
 }
 
-.legend {
+.metric-stack {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.metric-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-primary) 75%, black 25%);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 20%, transparent);
+}
+
+.metric-card span {
+  color: var(--text-muted);
+}
+
+.metric-card strong {
+  font-size: 1.05rem;
+}
+
+.stack-section {
+  margin-top: 0.9rem;
+}
+
+.stack-label-row {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.stack-label-row > span {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.stack-bar {
+  display: flex;
+  overflow: hidden;
+  border-radius: 999px;
+  height: 12px;
+  width: 100%;
+  background: color-mix(in srgb, var(--bg-primary) 76%, black 24%);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 20%, transparent);
+}
+
+.stack-segment {
+  display: block;
+  height: 100%;
+}
+
+.stack-lived {
+  background: var(--accent);
+}
+
+.stack-remaining {
+  background: color-mix(in srgb, var(--text-muted) 40%, var(--bg-primary) 60%);
+}
+
+.reflection-section {
+  margin-top: 1rem;
+}
+
+.reflection-list {
   margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reflection-list li {
+  color: color-mix(in srgb, var(--text-primary) 92%, white 8%);
+}
+
+.legend {
+  margin: 0.2rem 0 0;
   padding: 0;
   list-style: none;
   display: grid;
