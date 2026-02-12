@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clearStoredState, loadStateFromStorage, saveStateToStorage } from './persistence'
-import type { AppInputState } from '../types'
+import type { AppState } from '../types'
 
-const sampleState: AppInputState = {
+const sampleState: AppState = {
   birthDate: '1988-05-11',
   lifeExpectancyYears: 86,
-  colorScheme: 'paper',
-  categories: [
-    { id: '1', name: 'Work', color: '#111111', pastPercent: 30, futurePercent: 20 },
-    { id: '2', name: 'Family', color: '#222222', pastPercent: 70, futurePercent: 80 },
-  ],
 }
 
 describe('storage persistence', () => {
@@ -17,7 +12,7 @@ describe('storage persistence', () => {
     localStorage.clear()
   })
 
-  it('saves and loads encoded state', () => {
+  it('saves and loads state', () => {
     saveStateToStorage(sampleState)
     const loaded = loadStateFromStorage()
     expect(loaded).toEqual(sampleState)

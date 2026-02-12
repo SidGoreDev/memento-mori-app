@@ -5,6 +5,18 @@ import type { Category } from '../types'
 export interface GridRenderOptions {
   totalWeeks: number
   weeksLived: number
+  selectedWeek?: number | null
+  cellSize: number
+  gap: number
+  livedColor: string
+  emptyColor: string
+  currentColor: string
+}
+
+/** @deprecated kept for old test compat */
+export interface LegacyGridRenderOptions {
+  totalWeeks: number
+  weeksLived: number
   categoryIndices: number[]
   categories: Category[]
   selectedWeek?: number | null
@@ -34,6 +46,55 @@ export function drawGridToContext(
   const {
     totalWeeks,
     weeksLived,
+    selectedWeek,
+    cellSize,
+    gap,
+    livedColor,
+    emptyColor,
+    currentColor,
+  } = options
+
+  const layout = getGridLayout(totalWeeks, cellSize, gap)
+
+  context.imageSmoothingEnabled = false
+  context.clearRect(0, 0, layout.width, layout.height)
+
+  for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex += 1) {
+    const row = Math.floor(weekIndex / GRID_COLUMNS)
+    const col = weekIndex % GRID_COLUMNS
+    const x = col * (cellSize + gap)
+    const y = row * (cellSize + gap)
+    const isPast = weekIndex < weeksLived
+    const isCurrent = weekIndex === weeksLived
+
+    if (isCurrent) {
+      context.fillStyle = currentColor
+    } else if (isPast) {
+      context.fillStyle = livedColor
+    } else {
+      context.fillStyle = emptyColor
+    }
+
+    context.fillRect(x, y, cellSize, cellSize)
+
+    if (selectedWeek === weekIndex) {
+      context.strokeStyle = '#ffffff'
+      context.lineWidth = 2
+      context.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2)
+    }
+  }
+
+  return layout
+}
+
+/** @deprecated kept for old test compat */
+export function drawLegacyGridToContext(
+  context: CanvasRenderingContext2D,
+  options: LegacyGridRenderOptions,
+): GridLayout {
+  const {
+    totalWeeks,
+    weeksLived,
     categoryIndices,
     categories,
     selectedWeek,
@@ -44,7 +105,6 @@ export function drawGridToContext(
   } = options
 
   const layout = getGridLayout(totalWeeks, cellSize, gap)
-
   context.clearRect(0, 0, layout.width, layout.height)
 
   for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex += 1) {

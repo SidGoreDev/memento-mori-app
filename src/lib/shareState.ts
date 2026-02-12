@@ -1,12 +1,8 @@
 import { LIFE_EXPECTANCY_MAX, LIFE_EXPECTANCY_MIN } from './defaults'
-import type { AppInputState, Category } from '../types'
+import type { AppState } from '../types'
 
-interface SharedStatePayload extends AppInputState {
-  schemaVersion: 1
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
+interface SharedStatePayload extends AppState {
+  schemaVersion: 2
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -36,22 +32,14 @@ function fromBase64Url(base64Url: string): string {
   return pad ? `${base64}${'='.repeat(4 - pad)}` : base64
 }
 
-function isValidCategory(candidate: unknown): candidate is Category {
-  if (!candidate || typeof candidate !== 'object') return false
-  const data = candidate as Category
-  return (
-    typeof data.id === 'string' &&
-    typeof data.name === 'string' &&
-    typeof data.color === 'string' &&
-    typeof data.pastPercent === 'number' &&
-    typeof data.futurePercent === 'number'
-  )
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
 }
 
 function parsePayload(raw: unknown): SharedStatePayload | null {
   if (!raw || typeof raw !== 'object') return null
   const payload = raw as Partial<SharedStatePayload>
-  if (payload.schemaVersion !== 1) return null
+  if (payload.schemaVersion !== 2) return null
   if (typeof payload.birthDate !== 'string') return null
   if (
     typeof payload.lifeExpectancyYears !== 'number' ||
@@ -59,44 +47,28 @@ function parsePayload(raw: unknown): SharedStatePayload | null {
   ) {
     return null
   }
-  if (!Array.isArray(payload.categories) || !payload.categories.every(isValidCategory)) {
-    return null
-  }
-  if (
-    payload.colorScheme !== 'obsidian' &&
-    payload.colorScheme !== 'paper' &&
-    payload.colorScheme !== 'midnight'
-  ) {
-    return null
-  }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     birthDate: payload.birthDate,
     lifeExpectancyYears: clamp(
       payload.lifeExpectancyYears,
       LIFE_EXPECTANCY_MIN,
       LIFE_EXPECTANCY_MAX,
     ),
-    categories: payload.categories.map((category) => ({
-      ...category,
-      pastPercent: clamp(Math.round(category.pastPercent), 0, 100),
-      futurePercent: clamp(Math.round(category.futurePercent), 0, 100),
-    })),
-    colorScheme: payload.colorScheme,
   }
 }
 
-export function encodeStateToHash(state: AppInputState): string {
-  const payload: SharedStatePayload = { ...state, schemaVersion: 1 }
+export function encodeStateToHash(state: AppState): string {
+  const payload: SharedStatePayload = { ...state, schemaVersion: 2 }
   const json = JSON.stringify(payload)
   const bytes = new TextEncoder().encode(json)
-  return `v1.${toBase64Url(bytesToBase64(bytes))}`
+  return `v2.${toBase64Url(bytesToBase64(bytes))}`
 }
 
 export function decodeStateFromHash(hashValue: string): SharedStatePayload | null {
   const trimmed = hashValue.replace(/^#/, '')
-  if (!trimmed.startsWith('v1.')) return null
+  if (!trimmed.startsWith('v2.')) return null
   const encoded = trimmed.slice(3)
 
   try {

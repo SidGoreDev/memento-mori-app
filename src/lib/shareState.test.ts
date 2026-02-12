@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { encodeStateToHash, decodeStateFromHash } from './shareState'
-import type { AppInputState } from '../types'
+import type { AppState } from '../types'
 
-const sampleState: AppInputState = {
+const sampleState: AppState = {
   birthDate: '1990-01-01',
   lifeExpectancyYears: 80,
-  colorScheme: 'obsidian',
-  categories: [
-    { id: 'a', name: 'Work', color: '#111111', pastPercent: 50, futurePercent: 40 },
-    { id: 'b', name: 'Family', color: '#222222', pastPercent: 50, futurePercent: 60 },
-  ],
 }
 
 describe('shareState', () => {
@@ -20,7 +15,6 @@ describe('shareState', () => {
     expect(decoded).not.toBeNull()
     expect(decoded?.birthDate).toBe(sampleState.birthDate)
     expect(decoded?.lifeExpectancyYears).toBe(sampleState.lifeExpectancyYears)
-    expect(decoded?.categories).toHaveLength(2)
   })
 
   it('returns null for invalid hash', () => {
